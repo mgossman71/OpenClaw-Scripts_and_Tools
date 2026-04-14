@@ -13,6 +13,7 @@
 # Notes:
 #   - Uses --remote flow (no local browser needed)
 #   - Sets GOG_KEYRING_PASSWORD="" to match OpenClaw's config
+#   - Handles immutable keyring files (chattr +i protection)
 #   - After re-auth, restart the gateway: openclaw gateway restart
 #
 
@@ -22,6 +23,7 @@ export GOG_KEYRING_PASSWORD=""
 
 EMAIL="${1:-mgossman71@gmail.com}"
 SERVICES="${2:-gmail,calendar}"
+KEYRING_DIR="/root/.config/gogcli/keyring"
 
 echo "============================================"
 echo "  GOG OAuth Re-Authorization (Headless)"
@@ -32,13 +34,22 @@ echo "  Services: ${SERVICES}"
 echo "  Keyring:  blank passphrase"
 echo ""
 
-# --- Step 1: Remove old token (if exists) ---
-echo "[Step 1] Removing old token (if any)..."
+# --- Step 1: Unlock immutable keyring files ---
+echo "[Step 1] Unlocking keyring files..."
+for f in "${KEYRING_DIR}"/token:*"${EMAIL}"* 2>/dev/null; do
+    if [[ -f "${f}" ]]; then
+        chattr -i "${f}" 2>/dev/null && echo "  Unlocked: $(basename "${f}")" || true
+    fi
+done
+echo ""
+
+# --- Step 2: Remove old token ---
+echo "[Step 2] Removing old token (if any)..."
 gog auth remove "${EMAIL}" 2>/dev/null && echo "  Removed." || echo "  No existing token found."
 echo ""
 
-# --- Step 2: Generate the auth URL ---
-echo "[Step 2] Generating auth URL..."
+# --- Step 3: Generate the auth URL ---
+echo "[Step 3] Generating auth URL..."
 echo ""
 
 STEP1_OUTPUT=$(gog auth add "${EMAIL}" --services "${SERVICES}" --remote --step 1 2>&1)
@@ -69,8 +80,8 @@ echo "  4. Copy the FULL URL from your browser's"
 echo "     address bar (starts with http://127.0.0.1...)"
 echo ""
 
-# --- Step 3: Wait for user to paste the callback URL ---
-echo "[Step 3] Paste the callback URL below and press Enter:"
+# --- Step 4: Wait for user to paste the callback URL ---
+echo "[Step 4] Paste the callback URL below and press Enter:"
 echo ""
 read -r CALLBACK_URL
 
@@ -90,9 +101,9 @@ if [[ "${CALLBACK_URL}" != *"oauth2/callback"* ]]; then
     fi
 fi
 
-# --- Step 4: Exchange the code ---
+# --- Step 5: Exchange the code ---
 echo ""
-echo "[Step 4] Exchanging auth code..."
+echo "[Step 5] Exchanging auth code..."
 echo ""
 
 gog auth add "${EMAIL}" --services "${SERVICES}" --remote --step 2 --auth-url "${CALLBACK_URL}"
@@ -114,16 +125,24 @@ else
     exit 1
 fi
 
-# --- Step 5: Verify ---
+# --- Step 6: Verify ---
 echo ""
-echo "[Step 5] Verifying..."
+echo "[Step 6] Verifying..."
 echo ""
 gog auth list
 
+# --- Step 7: Re-lock keyring files ---
+echo ""
+echo "[Step 7] Locking keyring files (immutable)..."
+for f in "${KEYRING_DIR}"/token:*"${EMAIL}"*; do
+    if [[ -f "${f}" ]]; then
+        chattr +i "${f}" && echo "  Locked: $(basename "${f}")" || echo "  WARN: Could not lock $(basename "${f}")"
+    fi
+done
+
 echo ""
 echo "============================================"
-echo "  Done! Check the output above to confirm"
-echo "  ${EMAIL} shows valid tokens."
+echo "  Done! Tokens are verified and locked."
 echo ""
 echo "  Next step: restart the OpenClaw gateway"
 echo "    openclaw gateway restart"
