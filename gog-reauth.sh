@@ -4,7 +4,7 @@
 #
 # Usage: sudo ./gog-reauth.sh [email] [services]
 #   email    — Google account email (default: mgossman71@gmail.com)
-#   services — Comma-separated services (default: gmail,calendar)
+#   services — Comma-separated services (default: gmail,calendar,sheets,drive)
 #
 # Example:
 #   sudo ./gog-reauth.sh
@@ -22,7 +22,7 @@ set -euo pipefail
 export GOG_KEYRING_PASSWORD=""
 
 EMAIL="${1:-mgossman71@gmail.com}"
-SERVICES="${2:-gmail,calendar}"
+SERVICES="${2:-gmail,calendar,sheets,drive}"
 KEYRING_DIR="/root/.config/gogcli/keyring"
 
 echo "============================================"
