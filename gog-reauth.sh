@@ -36,7 +36,7 @@ echo ""
 
 # --- Step 1: Unlock immutable keyring files ---
 echo "[Step 1] Unlocking keyring files..."
-for f in "${KEYRING_DIR}"/token:*"${EMAIL}"* 2>/dev/null; do
+for f in "${KEYRING_DIR}"/token:*"${EMAIL}"*; do
     if [[ -f "${f}" ]]; then
         chattr -i "${f}" 2>/dev/null && echo "  Unlocked: $(basename "${f}")" || true
     fi
